@@ -4,7 +4,12 @@ const selectors = [
   'ytd-compact-video-renderer',
   'ytd-rich-item-renderer',
   'ytd-playlist-video-renderer',
-  'ytd-channel-renderer'
+  'ytd-channel-renderer',
+  // Shorts elements
+  'ytd-reel-video-renderer',
+  'ytd-reel-item-renderer',
+  'ytd-reel-shelf-renderer',
+  'ytd-rich-shelf-renderer'
 ];
 const selectorsString = selectors.join(',');
 let banned = [];
@@ -47,9 +52,16 @@ const observer = new MutationObserver(mutations => {
   mutations.forEach(m => {
     m.addedNodes.forEach(node => {
       if (node.nodeType !== 1) return;
+      let target = null;
       if (node.matches && node.matches(selectorsString)) {
-        hideIfBanned(node);
-      } else if (node.querySelectorAll) {
+        target = node;
+      } else if (node.closest) {
+        target = node.closest(selectorsString);
+      }
+      if (target) {
+        hideIfBanned(target);
+      }
+      if (node.querySelectorAll) {
         node.querySelectorAll(selectorsString).forEach(hideIfBanned);
       }
     });
