@@ -4,7 +4,10 @@ const selectors = [
   'ytd-compact-video-renderer',
   'ytd-rich-item-renderer',
   'ytd-playlist-video-renderer',
-  'ytd-channel-renderer'
+  'ytd-channel-renderer',
+  // Shorts elements
+  'ytd-reel-video-renderer',
+  'ytd-reel-item-renderer'
 ];
 const selectorsString = selectors.join(',');
 let banned = [];

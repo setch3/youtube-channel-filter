@@ -1,8 +1,8 @@
 # youtube-channel-filter
 
 This Chrome extension hides videos from specified YouTube channels. The filter
-works on search results, the home page, related videos, and anywhere else videos
-appear on youtube.com.
+works on search results, the home page, related videos, Shorts, and anywhere
+else videos appear on youtube.com.
 
 ## Usage
 
