@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Channel Filter",
+  "description": "Hide videos from specified YouTube channels.",
+  "version": "1.0",
+  "permissions": ["storage"],
+  "host_permissions": ["*://*.youtube.com/*"],
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
