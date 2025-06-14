@@ -1,15 +1,16 @@
 # youtube-channel-filter
 
-This Chrome extension hides videos from specified YouTube channels. The filter
-works on search results, the home page, related videos, Shorts (including the
-"Latest Shorts" shelf), and anywhere else videos appear on youtube.com.
+この Chrome 拡張機能は指定した YouTube チャンネルの動画を非表示にします。検索結果、ホーム画面、関連動画欄、
+ショートの「最新のショート」セクションなど、youtube.com 上のあらゆる動画リンクに対して動作します。
+指定したチャンネルのショート動画も同様に非表示になります。さらに、オプションから検索結果に表示されるショート動画をまとめて非表示にすることも可能です。
 
-## Usage
+## 使い方
 
-1. Load the extension in Chrome via **More Tools > Extensions > Load unpacked**
-   and choose the `src` directory.
-2. Open the extension options to add channel IDs or names to block.
-3. Videos from those channels will be hidden whenever you browse YouTube.
+1. Chrome の **その他のツール > 拡張機能 > パッケージ化されていない拡張機能を読み込む** で `src` フォルダを選択します。
+2. 拡張機能のオプション画面でブロックしたいチャンネル ID または名前を追加します。
+3. 必要に応じて **検索結果からショート動画を非表示** を有効にします。
+4. 追加したチャンネルの動画は YouTube を閲覧している際、自動的に非表示になります。
 
-The list of blocked channels is stored using Chrome sync storage so it will be
-shared across your browsers where you are signed in (if sync is enabled).
+ブロックしたチャンネルのリストは Chrome の同期ストレージに保存され、同期が有効な場合は同じアカウントの
+ブラウザ間で共有されます。
+

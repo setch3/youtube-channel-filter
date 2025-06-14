@@ -1,9 +1,10 @@
 const input = document.getElementById('newChannel');
 const list = document.getElementById('list');
 const addBtn = document.getElementById('add');
+const hideShortsCheckbox = document.getElementById('hideShortsSearch');
 
 function refresh() {
-  chrome.storage.sync.get({ banned: [] }, data => {
+  chrome.storage.sync.get({ banned: [], hideShortsSearch: false }, data => {
     list.innerHTML = '';
     data.banned.forEach(channel => {
       const li = document.createElement('li');
@@ -16,6 +17,7 @@ function refresh() {
       li.appendChild(btn);
       list.appendChild(li);
     });
+    hideShortsCheckbox.checked = data.hideShortsSearch;
   });
 }
 
@@ -31,6 +33,10 @@ addBtn.addEventListener('click', () => {
     }
   });
   input.value = '';
+});
+
+hideShortsCheckbox.addEventListener('change', () => {
+  chrome.storage.sync.set({ hideShortsSearch: hideShortsCheckbox.checked });
 });
 
 document.addEventListener('DOMContentLoaded', refresh);

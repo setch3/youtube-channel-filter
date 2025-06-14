@@ -5,6 +5,9 @@ const selectors = [
   'ytd-rich-item-renderer',
   'ytd-playlist-video-renderer',
   'ytd-channel-renderer',
+  'ytd-shelf-renderer',
+  'ytd-rich-section-renderer',
+
   // Shorts elements
   'ytd-reel-video-renderer',
   'ytd-reel-item-renderer',
@@ -13,6 +16,7 @@ const selectors = [
 ];
 const selectorsString = selectors.join(',');
 let banned = [];
+let hideShortsSearch = false;
 
 function getIdentifier(link) {
   if (!link) return null;
@@ -23,27 +27,40 @@ function getIdentifier(link) {
   return null;
 }
 
-function hideIfBanned(node) {
+function hideIfBannedOrShort(node) {
   const link = node.querySelector('a[href*="/channel/"], a[href*="/@"]');
   const identifier = getIdentifier(link);
-  if (!identifier) return;
-  if (banned.some(b => identifier === b.toLowerCase())) {
-    node.style.display = 'none';
+  const bannedMatch = identifier && banned.some(b => identifier === b.toLowerCase());
+  const shortMatch =
+    hideShortsSearch &&
+    location.href.includes('/results') &&
+    (node.matches('ytd-reel-shelf-renderer, ytd-reel-video-renderer, ytd-reel-item-renderer') ||
+      node.querySelector('a[href*="/shorts/"]'));
+  if (bannedMatch || shortMatch) {
+    const shelf = node.closest('ytd-reel-shelf-renderer');
+    const target = shortMatch && shelf ? shelf : node;
+    target.style.display = 'none';
   }
 }
 
 function filterExisting() {
-  document.querySelectorAll(selectorsString).forEach(hideIfBanned);
+  document.querySelectorAll(selectorsString).forEach(hideIfBannedOrShort);
 }
 
-chrome.storage.sync.get({ banned: [] }, data => {
+chrome.storage.sync.get({ banned: [], hideShortsSearch: false }, data => {
   banned = data.banned;
+  hideShortsSearch = data.hideShortsSearch;
   filterExisting();
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'sync' && changes.banned) {
-    banned = changes.banned.newValue;
+  if (area === 'sync') {
+    if (changes.banned) {
+      banned = changes.banned.newValue;
+    }
+    if (changes.hideShortsSearch) {
+      hideShortsSearch = changes.hideShortsSearch.newValue;
+    }
     filterExisting();
   }
 });
@@ -59,10 +76,10 @@ const observer = new MutationObserver(mutations => {
         target = node.closest(selectorsString);
       }
       if (target) {
-        hideIfBanned(target);
+        hideIfBannedOrShort(target);
       }
       if (node.querySelectorAll) {
-        node.querySelectorAll(selectorsString).forEach(hideIfBanned);
+        node.querySelectorAll(selectorsString).forEach(hideIfBannedOrShort);
       }
     });
   });
