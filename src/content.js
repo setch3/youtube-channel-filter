@@ -31,7 +31,11 @@ function getChannelInfo(node) {
       if (handleMatch) id = '@' + handleMatch[1].toLowerCase();
     }
   }
-  const name = link ? link.textContent.trim() : null;
+  let name = link ? link.textContent.trim() : null;
+  if (!name) {
+    const alt = node.querySelector('yt-formatted-string, #channel-name');
+    if (alt) name = alt.textContent.trim();
+  }
   return { id, name };
 }
 
@@ -45,7 +49,9 @@ function isShort(node) {
 function hideIfBannedOrShort(node) {
   const { id, name } = getChannelInfo(node);
   const bannedIdMatch = id && bannedIds.some(b => id === b.toLowerCase());
-  const bannedNameMatch = name && bannedNames.some(b => name === b);
+  const bannedNameMatch =
+    (name && bannedNames.some(b => name === b)) ||
+    bannedNames.some(b => node.textContent && node.textContent.includes(b));
   const shortMatch =
     hideShortsSearch &&
     (location.href.includes('/results') || location.href.includes('/watch')) &&
