@@ -7,6 +7,7 @@ const selectors = [
   'ytd-channel-renderer',
   'ytd-shelf-renderer',
   'ytd-rich-section-renderer',
+
   // Shorts elements
   'ytd-reel-video-renderer',
   'ytd-reel-item-renderer',
