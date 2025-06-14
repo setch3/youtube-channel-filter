@@ -1,38 +1,78 @@
-const input = document.getElementById('newChannel');
-const list = document.getElementById('list');
-const addBtn = document.getElementById('add');
+const idInput = document.getElementById('newChannelId');
+const nameInput = document.getElementById('newChannelName');
+const idList = document.getElementById('idList');
+const nameList = document.getElementById('nameList');
+const addIdBtn = document.getElementById('addId');
+const addNameBtn = document.getElementById('addName');
 const hideShortsCheckbox = document.getElementById('hideShortsSearch');
 
 function refresh() {
-  chrome.storage.sync.get({ banned: [], hideShortsSearch: false }, data => {
-    list.innerHTML = '';
-    data.banned.forEach(channel => {
-      const li = document.createElement('li');
-      li.textContent = channel;
-      const btn = document.createElement('button');
-      btn.textContent = 'Remove';
-      btn.addEventListener('click', () => {
-        chrome.storage.sync.set({ banned: data.banned.filter(c => c !== channel) }, refresh);
+  chrome.storage.sync.get(
+    { bannedIds: [], bannedNames: [], hideShortsSearch: false },
+    data => {
+      idList.innerHTML = '';
+      data.bannedIds.forEach(id => {
+        const li = document.createElement('li');
+        li.textContent = id;
+        const btn = document.createElement('button');
+        btn.textContent = 'Remove';
+        btn.addEventListener('click', () => {
+          chrome.storage.sync.set(
+            { bannedIds: data.bannedIds.filter(c => c !== id) },
+            refresh
+          );
+        });
+        li.appendChild(btn);
+        idList.appendChild(li);
       });
-      li.appendChild(btn);
-      list.appendChild(li);
-    });
-    hideShortsCheckbox.checked = data.hideShortsSearch;
-  });
+
+      nameList.innerHTML = '';
+      data.bannedNames.forEach(name => {
+        const li = document.createElement('li');
+        li.textContent = name;
+        const btn = document.createElement('button');
+        btn.textContent = 'Remove';
+        btn.addEventListener('click', () => {
+          chrome.storage.sync.set(
+            { bannedNames: data.bannedNames.filter(c => c !== name) },
+            refresh
+          );
+        });
+        li.appendChild(btn);
+        nameList.appendChild(li);
+      });
+
+      hideShortsCheckbox.checked = data.hideShortsSearch;
+    }
+  );
 }
 
-addBtn.addEventListener('click', () => {
-  const channel = input.value.trim();
+addIdBtn.addEventListener('click', () => {
+  const channel = idInput.value.trim();
   if (!channel) return;
-  chrome.storage.sync.get({ banned: [] }, data => {
-    if (!data.banned.includes(channel)) {
-      data.banned.push(channel);
-      chrome.storage.sync.set({ banned: data.banned }, refresh);
+  chrome.storage.sync.get({ bannedIds: [] }, data => {
+    if (!data.bannedIds.includes(channel)) {
+      data.bannedIds.push(channel);
+      chrome.storage.sync.set({ bannedIds: data.bannedIds }, refresh);
     } else {
       refresh();
     }
   });
-  input.value = '';
+  idInput.value = '';
+});
+
+addNameBtn.addEventListener('click', () => {
+  const name = nameInput.value.trim();
+  if (!name) return;
+  chrome.storage.sync.get({ bannedNames: [] }, data => {
+    if (!data.bannedNames.includes(name)) {
+      data.bannedNames.push(name);
+      chrome.storage.sync.set({ bannedNames: data.bannedNames }, refresh);
+    } else {
+      refresh();
+    }
+  });
+  nameInput.value = '';
 });
 
 hideShortsCheckbox.addEventListener('change', () => {
