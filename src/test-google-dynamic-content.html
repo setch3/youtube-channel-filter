@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google検索動的コンテンツ監視機能テスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #3367d6;
+        }
+        .test-results {
+            background: #f8f9fa;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .mock-search-container {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            margin: 10px 0;
+            min-height: 200px;
+        }
+        .mock-video-result {
+            border: 1px solid #e0e0e0;
+            margin: 10px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+        }
+        .mock-video-result a {
+            color: #1a0dab;
+            text-decoration: none;
+            font-size: 18px;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .mock-video-result cite {
+            color: #006621;
+            font-style: normal;
+            font-size: 14px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-active { background-color: #34a853; }
+        .status-inactive { background-color: #ea4335; }
+        .status-processing { background-color: #fbbc04; }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #4285f4;
+            background: #f8f9fa;
+        }
+        .log-entry.error {
+            border-left-color: #ea4335;
+            background: #fce8e6;
+        }
+        .log-entry.success {
+            border-left-color: #34a853;
+            background: #e6f4ea;
+        }
+    </style>
+</head>
+<body>
+    <h1>Google検索動的コンテンツ監視機能テスト</h1>
+    
+    <div class="test-section">
+        <h2>システム状態</h2>
+        <div id="system-status">
+            <div><span class="status-indicator status-inactive"></span>MutationObserver: 未初期化</div>
+            <div><span class="status-indicator status-inactive"></span>URL監視: 未初期化</div>
+            <div><span class="status-indicator status-inactive"></span>スクロール監視: 未初期化</div>
+            <div><span class="status-indicator status-inactive"></span>ボタン監視: 未初期化</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>動的コンテンツ追加テスト</h2>
+        <p>新しいYouTube動画要素を動的に追加して、MutationObserverが正しく検出・フィルタリングするかテストします。</p>
+        
+        <button class="test-button" onclick="addMockVideoResult()">YouTube動画結果を追加</button>
+        <button class="test-button" onclick="addMockVideoCarousel()">動画カルーセルを追加</button>
+        <button class="test-button" onclick="simulateInfiniteScroll()">無限スクロールをシミュレート</button>
+        <button class="test-button" onclick="simulateShowMoreClick()">「もっと見る」クリックをシミュレート</button>
+        <button class="test-button" onclick="clearMockResults()">テスト結果をクリア</button>
+        
+        <div id="mock-search-results" class="mock-search-container">
+            <p>ここに動的に追加されるYouTube動画結果が表示されます</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>検索クエリ変更テスト</h2>
+        <p>URLの変更を検出して、新しい検索結果に対してフィルタリングが適用されるかテストします。</p>
+        
+        <button class="test-button" onclick="simulateSearchQueryChange('test query 1')">検索クエリ1に変更</button>
+        <button class="test-button" onclick="simulateSearchQueryChange('test query 2')">検索クエリ2に変更</button>
+        <button class="test-button" onclick="simulateSearchQueryChange('youtube music')">YouTube音楽検索</button>
+        <button class="test-button" onclick="simulateBackButton()">ブラウザ戻るボタンをシミュレート</button>
+        
+        <div>現在のURL: <span id="current-url">-</span></div>
+        <div>検出された検索クエリ: <span id="detected-query">-</span></div>
+    </div>
+
+    <div class="test-section">
+        <h2>パフォーマンステスト</h2>
+        <p>大量の要素を追加して、パフォーマンスへの影響をテストします。</p>
+        
+        <button class="test-button" onclick="performanceTest(10)">10個の動画を追加</button>
+        <button class="test-button" onclick="performanceTest(50)">50個の動画を追加</button>
+        <button class="test-button" onclick="performanceTest(100)">100個の動画を追加</button>
+        <button class="test-button" onclick="measureFilteringPerformance()">フィルタリング性能測定</button>
+        
+        <div id="performance-results" class="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>デバッグ情報</h2>
+        <button class="test-button" onclick="showDebugInfo()">デバッグ情報を表示</button>
+        <button class="test-button" onclick="showFilterStats()">フィルタリング統計を表示</button>
+        <button class="test-button" onclick="testChannelExtraction()">チャンネル抽出テストを実行</button>
+        <button class="test-button" onclick="clearLogs()">ログをクリア</button>
+        
+        <div id="debug-info" class="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>リアルタイムログ</h2>
+        <div id="realtime-logs" class="test-results" style="height: 300px; overflow-y: auto;"></div>
+    </div>
+
+    <script>
+        // テスト用のモックデータ
+        const mockChannels = [
+            { name: 'TestChannel1', handle: '@testchannel1', id: 'UC1234567890' },
+            { name: 'TestChannel2', handle: '@testchannel2', id: 'UC0987654321' },
+            { name: 'MusicChannel', handle: '@musicchannel', id: 'UC1111111111' },
+            { name: 'TechChannel', handle: '@techchannel', id: 'UC2222222222' },
+            { name: 'GameChannel', handle: '@gamechannel', id: 'UC3333333333' }
+        ];
+
+        const mockVideos = [
+            { title: 'テスト動画1', id: 'dQw4w9WgXcQ' },
+            { title: 'テスト動画2', id: 'oHg5SJYRHA0' },
+            { title: 'Music Video Test', id: 'kJQP7kiw5Fk' },
+            { title: 'Tech Tutorial', id: 'M7lc1UVf-VE' },
+            { title: 'Gaming Stream', id: 'ZZ5LpwO-An4' }
+        ];
+
+        let testCounter = 0;
+        let logCounter = 0;
+
+        // ログ機能
+        function addLog(message, type = 'info') {
+            const logContainer = document.getElementById('realtime-logs');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // ログが多くなりすぎた場合は古いものを削除
+            if (logContainer.children.length > 100) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+        }
+
+        // システム状態の更新
+        function updateSystemStatus() {
+            const statusContainer = document.getElementById('system-status');
+            const indicators = statusContainer.querySelectorAll('.status-indicator');
+            
+            // MutationObserver状態
+            if (window.debugYouTubeFilter) {
+                indicators[0].className = 'status-indicator status-active';
+                indicators[0].nextSibling.textContent = 'MutationObserver: アクティブ';
+            }
+            
+            addLog('システム状態を更新しました', 'info');
+        }
+
+        // モックYouTube動画結果を追加
+        function addMockVideoResult() {
+            const container = document.getElementById('mock-search-results');
+            const channel = mockChannels[Math.floor(Math.random() * mockChannels.length)];
+            const video = mockVideos[Math.floor(Math.random() * mockVideos.length)];
+            
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'mock-video-result g';
+            resultDiv.setAttribute('data-ved', `test-${testCounter++}`);
+            
+            resultDiv.innerHTML = `
+                <a href="https://www.youtube.com/watch?v=${video.id}">${video.title}</a>
+                <cite>https://www.youtube.com/${channel.handle}</cite>
+                <div class="VuuXrf">${channel.name}</div>
+            `;
+            
+            container.appendChild(resultDiv);
+            addLog(`YouTube動画結果を追加: ${video.title} (${channel.name})`, 'info');
+        }
+
+        // モック動画カルーセルを追加
+        function addMockVideoCarousel() {
+            const container = document.getElementById('mock-search-results');
+            const carouselDiv = document.createElement('g-scrolling-carousel');
+            
+            for (let i = 0; i < 3; i++) {
+                const channel = mockChannels[i % mockChannels.length];
+                const video = mockVideos[i % mockVideos.length];
+                
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'pcJO7e';
+                itemDiv.innerHTML = `
+                    <a href="https://www.youtube.com/watch?v=${video.id}">${video.title}</a>
+                    <div class="zBAuLc">${channel.name}</div>
+                `;
+                
+                carouselDiv.appendChild(itemDiv);
+            }
+            
+            container.appendChild(carouselDiv);
+            addLog('動画カルーセルを追加しました', 'info');
+        }
+
+        // 無限スクロールをシミュレート
+        function simulateInfiniteScroll() {
+            addLog('無限スクロールをシミュレート中...', 'info');
+            
+            // スクロール位置を下部に移動
+            window.scrollTo(0, document.body.scrollHeight);
+            
+            // 少し待ってから新しいコンテンツを追加
+            setTimeout(() => {
+                for (let i = 0; i < 5; i++) {
+                    addMockVideoResult();
+                }
+                addLog('無限スクロールで5個の動画結果を追加しました', 'success');
+            }, 1000);
+        }
+
+        // 「もっと見る」ボタンクリックをシミュレート
+        function simulateShowMoreClick() {
+            // モック「もっと見る」ボタンを作成
+            const showMoreButton = document.createElement('button');
+            showMoreButton.className = 'RVQdVd';
+            showMoreButton.textContent = 'もっと見る';
+            showMoreButton.setAttribute('jsname', 'Cpkphb');
+            
+            document.body.appendChild(showMoreButton);
+            
+            // クリックイベントを発火
+            showMoreButton.click();
+            
+            addLog('「もっと見る」ボタンクリックをシミュレートしました', 'info');
+            
+            // ボタンを削除
+            setTimeout(() => {
+                document.body.removeChild(showMoreButton);
+                
+                // 新しいコンテンツを追加
+                for (let i = 0; i < 3; i++) {
+                    addMockVideoResult();
+                }
+                addLog('「もっと見る」で3個の動画結果を追加しました', 'success');
+            }, 1500);
+        }
+
+        // 検索クエリ変更をシミュレート
+        function simulateSearchQueryChange(query) {
+            const newUrl = `${window.location.origin}${window.location.pathname}?q=${encodeURIComponent(query)}`;
+            
+            // history.pushStateを使用してURL変更をシミュレート
+            history.pushState({}, '', newUrl);
+            
+            // URL表示を更新
+            document.getElementById('current-url').textContent = newUrl;
+            document.getElementById('detected-query').textContent = query;
+            
+            addLog(`検索クエリを変更: "${query}"`, 'info');
+            
+            // 新しい検索結果を追加
+            setTimeout(() => {
+                clearMockResults();
+                for (let i = 0; i < 4; i++) {
+                    addMockVideoResult();
+                }
+                addLog(`新しい検索結果を4個追加しました`, 'success');
+            }, 500);
+        }
+
+        // ブラウザ戻るボタンをシミュレート
+        function simulateBackButton() {
+            addLog('ブラウザ戻るボタンをシミュレート中...', 'info');
+            
+            // popstateイベントを発火
+            const popstateEvent = new PopStateEvent('popstate', {
+                state: { query: 'previous query' }
+            });
+            window.dispatchEvent(popstateEvent);
+            
+            addLog('popstateイベントを発火しました', 'success');
+        }
+
+        // パフォーマンステスト
+        function performanceTest(count) {
+            const startTime = performance.now();
+            addLog(`パフォーマンステスト開始: ${count}個の動画を追加`, 'info');
+            
+            for (let i = 0; i < count; i++) {
+                addMockVideoResult();
+            }
+            
+            const endTime = performance.now();
+            const duration = endTime - startTime;
+            
+            const resultsDiv = document.getElementById('performance-results');
+            resultsDiv.textContent += `${count}個の動画追加: ${duration.toFixed(2)}ms (平均: ${(duration/count).toFixed(2)}ms/個)\n`;
+            
+            addLog(`パフォーマンステスト完了: ${duration.toFixed(2)}ms`, 'success');
+        }
+
+        // フィルタリング性能測定
+        function measureFilteringPerformance() {
+            if (!window.debugYouTubeFilter) {
+                addLog('debugYouTubeFilter が利用できません', 'error');
+                return;
+            }
+            
+            const startTime = performance.now();
+            
+            // 手動でフィルタリングを実行
+            window.debugYouTubeFilter.filterVideos(document, true);
+            
+            const endTime = performance.now();
+            const duration = endTime - startTime;
+            
+            const resultsDiv = document.getElementById('performance-results');
+            resultsDiv.textContent += `フィルタリング実行時間: ${duration.toFixed(2)}ms\n`;
+            
+            addLog(`フィルタリング性能測定完了: ${duration.toFixed(2)}ms`, 'success');
+        }
+
+        // デバッグ情報を表示
+        function showDebugInfo() {
+            const debugDiv = document.getElementById('debug-info');
+            
+            if (!window.debugYouTubeFilter) {
+                debugDiv.textContent = 'debugYouTubeFilter が利用できません。Google検索ページで実行してください。';
+                addLog('debugYouTubeFilter が利用できません', 'error');
+                return;
+            }
+            
+            const settings = window.debugYouTubeFilter.settings();
+            const detectedVideos = window.debugYouTubeFilter.detectVideos();
+            
+            debugDiv.textContent = `
+デバッグ情報:
+- 検出されたYouTube動画数: ${detectedVideos.length}
+- ブロック対象チャンネルID数: ${settings.bannedIds.length}
+- ブロック対象チャンネル名数: ${settings.bannedNames.length}
+- Google検索フィルタ有効: ${settings.enableGoogleFilter}
+- 最終更新: ${new Date(settings.lastUpdated).toLocaleString()}
+
+検出された動画:
+${detectedVideos.map((video, index) => `${index + 1}. ${video.href}`).join('\n')}
+            `;
+            
+            addLog('デバッグ情報を表示しました', 'info');
+        }
+
+        // フィルタリング統計を表示
+        function showFilterStats() {
+            if (!window.debugYouTubeFilter) {
+                addLog('debugYouTubeFilter が利用できません', 'error');
+                return;
+            }
+            
+            const stats = window.debugYouTubeFilter.stats();
+            const debugDiv = document.getElementById('debug-info');
+            
+            debugDiv.textContent = `
+フィルタリング統計:
+- 処理済み動画数: ${stats.processed}
+- 非表示にした動画数: ${stats.hidden}
+- 再表示した動画数: ${stats.shown}
+- エラー数: ${stats.errors}
+- 統計リセット時刻: ${new Date(stats.lastReset).toLocaleString()}
+            `;
+            
+            addLog('フィルタリング統計を表示しました', 'info');
+        }
+
+        // チャンネル抽出テストを実行
+        function testChannelExtraction() {
+            if (!window.debugYouTubeFilter) {
+                addLog('debugYouTubeFilter が利用できません', 'error');
+                return;
+            }
+            
+            const testResult = window.debugYouTubeFilter.testChannelExtraction();
+            
+            if (testResult) {
+                addLog('チャンネル抽出テストが成功しました', 'success');
+            } else {
+                addLog('チャンネル抽出テストが失敗しました', 'error');
+            }
+        }
+
+        // テスト結果をクリア
+        function clearMockResults() {
+            const container = document.getElementById('mock-search-results');
+            container.innerHTML = '<p>ここに動的に追加されるYouTube動画結果が表示されます</p>';
+            addLog('テスト結果をクリアしました', 'info');
+        }
+
+        // ログをクリア
+        function clearLogs() {
+            document.getElementById('realtime-logs').innerHTML = '';
+            document.getElementById('debug-info').textContent = '';
+            document.getElementById('performance-results').textContent = '';
+            logCounter = 0;
+            addLog('ログをクリアしました', 'info');
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSystemStatus();
+            document.getElementById('current-url').textContent = window.location.href;
+            
+            // URLパラメータから検索クエリを取得
+            const urlParams = new URLSearchParams(window.location.search);
+            const query = urlParams.get('q') || '(なし)';
+            document.getElementById('detected-query').textContent = query;
+            
+            addLog('動的コンテンツ監視機能テストページが初期化されました', 'success');
+            
+            // 定期的にシステム状態を更新
+            setInterval(updateSystemStatus, 5000);
+        });
+    </script>
+</body>
+</html>

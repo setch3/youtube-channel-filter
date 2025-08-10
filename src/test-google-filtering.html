@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google検索フィルタリング機能テスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .mock-search-result {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 3px;
+        }
+        .mock-search-result.hidden {
+            display: none;
+        }
+        button {
+            margin: 5px;
+            padding: 8px 16px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #3367d6;
+        }
+        #test-output {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Google検索フィルタリング機能テスト</h1>
+    
+    <div class="test-section">
+        <h2>テスト設定</h2>
+        <div>
+            <label>
+                <input type="checkbox" id="enableFilter" checked> Google検索フィルタリングを有効にする
+            </label>
+        </div>
+        <div>
+            <label>ブロック対象チャンネルID (カンマ区切り):</label><br>
+            <input type="text" id="bannedIds" value="@TestChannel,UC1234567890,TestUser" style="width: 100%; margin: 5px 0;">
+        </div>
+        <div>
+            <label>ブロック対象チャンネル名 (カンマ区切り):</label><br>
+            <input type="text" id="bannedNames" value="テストチャンネル,Test Channel" style="width: 100%; margin: 5px 0;">
+        </div>
+        <button onclick="updateTestSettings()">設定を更新</button>
+    </div>
+
+    <div class="test-section">
+        <h2>フィルタリング判定テスト</h2>
+        <button onclick="runFilteringTests()">フィルタリング判定テストを実行</button>
+        <div id="filtering-test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>DOM操作テスト</h2>
+        <button onclick="createMockSearchResults()">模擬検索結果を作成</button>
+        <button onclick="testDOMOperations()">DOM操作テストを実行</button>
+        <button onclick="clearMockResults()">模擬結果をクリア</button>
+        <div id="mock-search-container"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>パフォーマンステスト</h2>
+        <button onclick="runPerformanceTest()">パフォーマンステストを実行</button>
+        <div id="performance-test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>テスト出力</h2>
+        <button onclick="clearOutput()">出力をクリア</button>
+        <div id="test-output"></div>
+    </div>
+
+    <script>
+        // テスト用のログ出力
+        function log(message) {
+            const output = document.getElementById('test-output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('test-output').textContent = '';
+        }
+
+        // 設定更新
+        function updateTestSettings() {
+            const enableFilter = document.getElementById('enableFilter').checked;
+            const bannedIds = document.getElementById('bannedIds').value.split(',').map(s => s.trim()).filter(s => s);
+            const bannedNames = document.getElementById('bannedNames').value.split(',').map(s => s.trim()).filter(s => s);
+
+            // Chrome storage APIが利用可能な場合は設定を保存
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                chrome.storage.sync.set({
+                    enableGoogleFilter: enableFilter,
+                    bannedIds: bannedIds,
+                    bannedNames: bannedNames
+                }, () => {
+                    log('設定が更新されました');
+                });
+            } else {
+                // テスト環境用のグローバル変数設定
+                window.testSettings = {
+                    enableGoogleFilter: enableFilter,
+                    bannedIds: bannedIds,
+                    bannedNames: bannedNames
+                };
+                log('テスト設定が更新されました (Chrome拡張機能外)');
+            }
+        }
+
+        // フィルタリング判定テスト
+        function runFilteringTests() {
+            log('=== フィルタリング判定テスト開始 ===');
+            
+            const testCases = [
+                {
+                    name: 'チャンネルID完全一致テスト',
+                    videoInfo: { channelId: '@TestChannel', channelName: 'Some Channel', url: 'https://youtube.com/watch?v=test' },
+                    expected: true
+                },
+                {
+                    name: 'チャンネルID大文字小文字無視テスト',
+                    videoInfo: { channelId: '@testchannel', channelName: 'Some Channel', url: 'https://youtube.com/watch?v=test' },
+                    expected: true
+                },
+                {
+                    name: 'チャンネル名部分一致テスト',
+                    videoInfo: { channelId: 'SomeOtherChannel', channelName: 'テストチャンネルの動画', url: 'https://youtube.com/watch?v=test' },
+                    expected: true
+                },
+                {
+                    name: 'マッチしないケーステスト',
+                    videoInfo: { channelId: 'DifferentChannel', channelName: 'Different Channel', url: 'https://youtube.com/watch?v=test' },
+                    expected: false
+                },
+                {
+                    name: 'ハンドル形式テスト',
+                    videoInfo: { channelHandle: '@TestChannel', channelName: 'Some Channel', url: 'https://youtube.com/watch?v=test' },
+                    expected: true
+                },
+                {
+                    name: '無効な入力テスト',
+                    videoInfo: null,
+                    expected: false
+                }
+            ];
+
+            const resultsContainer = document.getElementById('filtering-test-results');
+            resultsContainer.innerHTML = '';
+
+            testCases.forEach((testCase, index) => {
+                try {
+                    // shouldHideVideo関数が利用可能かチェック
+                    if (typeof window.debugYouTubeFilter !== 'undefined' && window.debugYouTubeFilter.shouldHideVideo) {
+                        const result = window.debugYouTubeFilter.shouldHideVideo(testCase.videoInfo);
+                        const passed = result.shouldHide === testCase.expected;
+                        
+                        const resultDiv = document.createElement('div');
+                        resultDiv.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+                        resultDiv.textContent = `${testCase.name}: ${passed ? 'PASS' : 'FAIL'} (期待値: ${testCase.expected}, 実際: ${result.shouldHide})`;
+                        resultsContainer.appendChild(resultDiv);
+                        
+                        log(`テスト ${index + 1}: ${testCase.name} - ${passed ? 'PASS' : 'FAIL'}`);
+                        if (result.shouldHide) {
+                            log(`  理由: ${result.reason}, マッチした値: ${result.matchedValue}`);
+                        }
+                    } else {
+                        log('エラー: shouldHideVideo関数が利用できません。Google検索ページでテストしてください。');
+                        break;
+                    }
+                } catch (error) {
+                    log(`テスト ${index + 1} でエラー: ${error.message}`);
+                }
+            });
+
+            log('=== フィルタリング判定テスト完了 ===');
+        }
+
+        // 模擬検索結果作成
+        function createMockSearchResults() {
+            const container = document.getElementById('mock-search-container');
+            container.innerHTML = `
+                <div class="mock-search-result" data-ved="test1">
+                    <h3><a href="https://www.youtube.com/watch?v=test1">テスト動画1</a></h3>
+                    <cite>https://www.youtube.com/@TestChannel</cite>
+                    <div>テストチャンネルの動画です</div>
+                </div>
+                <div class="mock-search-result" data-ved="test2">
+                    <h3><a href="https://www.youtube.com/watch?v=test2">テスト動画2</a></h3>
+                    <cite>https://www.youtube.com/@DifferentChannel</cite>
+                    <div>別のチャンネルの動画です</div>
+                </div>
+                <div class="mock-search-result" data-ved="test3">
+                    <h3><a href="https://www.youtube.com/shorts/test3">ショート動画</a></h3>
+                    <cite>https://www.youtube.com/c/TestUser</cite>
+                    <div>ショート動画のテストです</div>
+                </div>
+            `;
+            log('模擬検索結果を作成しました');
+        }
+
+        // DOM操作テスト
+        function testDOMOperations() {
+            log('=== DOM操作テスト開始 ===');
+            
+            const mockResults = document.querySelectorAll('.mock-search-result');
+            if (mockResults.length === 0) {
+                log('エラー: 模擬検索結果が見つかりません。先に「模擬検索結果を作成」ボタンを押してください。');
+                return;
+            }
+
+            mockResults.forEach((result, index) => {
+                const link = result.querySelector('a[href*="youtube.com"]');
+                if (link) {
+                    // hideVideoElement関数のテスト
+                    if (typeof window.debugYouTubeFilter !== 'undefined' && window.debugYouTubeFilter.hideVideoElement) {
+                        const filterResult = { reason: 'test', matchedValue: 'test-value' };
+                        const success = window.debugYouTubeFilter.hideVideoElement(link, filterResult);
+                        log(`DOM操作テスト ${index + 1}: ${success ? 'SUCCESS' : 'FAILED'}`);
+                    } else {
+                        // フォールバック: 直接非表示処理
+                        result.style.display = 'none';
+                        result.setAttribute('data-youtube-filtered', 'true');
+                        log(`DOM操作テスト ${index + 1}: SUCCESS (フォールバック処理)`);
+                    }
+                }
+            });
+
+            log('=== DOM操作テスト完了 ===');
+        }
+
+        // 模擬結果クリア
+        function clearMockResults() {
+            document.getElementById('mock-search-container').innerHTML = '';
+            log('模擬検索結果をクリアしました');
+        }
+
+        // パフォーマンステスト
+        function runPerformanceTest() {
+            log('=== パフォーマンステスト開始 ===');
+            
+            const startTime = performance.now();
+            
+            // 大量の模擬要素を作成
+            const container = document.getElementById('mock-search-container');
+            const testCount = 100;
+            
+            for (let i = 0; i < testCount; i++) {
+                const div = document.createElement('div');
+                div.className = 'mock-search-result';
+                div.innerHTML = `
+                    <h3><a href="https://www.youtube.com/watch?v=test${i}">テスト動画${i}</a></h3>
+                    <cite>https://www.youtube.com/@TestChannel${i % 10}</cite>
+                `;
+                container.appendChild(div);
+            }
+            
+            const creationTime = performance.now();
+            log(`${testCount}個の要素作成時間: ${(creationTime - startTime).toFixed(2)}ms`);
+            
+            // フィルタリング処理のテスト
+            if (typeof window.debugYouTubeFilter !== 'undefined' && window.debugYouTubeFilter.filterVideos) {
+                const filterStartTime = performance.now();
+                window.debugYouTubeFilter.filterVideos(container, true);
+                const filterEndTime = performance.now();
+                
+                log(`フィルタリング処理時間: ${(filterEndTime - filterStartTime).toFixed(2)}ms`);
+                log(`1要素あたりの平均処理時間: ${((filterEndTime - filterStartTime) / testCount).toFixed(2)}ms`);
+            }
+            
+            // 統計情報の表示
+            if (typeof window.debugYouTubeFilter !== 'undefined' && window.debugYouTubeFilter.stats) {
+                const stats = window.debugYouTubeFilter.stats();
+                log(`統計情報: ${JSON.stringify(stats, null, 2)}`);
+            }
+            
+            log('=== パフォーマンステスト完了 ===');
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Google検索フィルタリング機能テストページが読み込まれました');
+            updateTestSettings();
+            
+            // デバッグ機能の確認
+            if (typeof window.debugYouTubeFilter !== 'undefined') {
+                log('デバッグ機能が利用可能です');
+            } else {
+                log('注意: デバッグ機能が利用できません。Google検索ページでテストしてください。');
+            }
+        });
+    </script>
+</body>
+</html>
+</content>

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>チャンネル情報抽出機能テスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background-color: #45a049;
+        }
+        .test-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .code-example {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>チャンネル情報抽出機能テスト</h1>
+        
+        <div class="test-section">
+            <h2>テスト実行</h2>
+            <p>以下のボタンをクリックして各機能のテストを実行してください。</p>
+            
+            <button class="test-button" onclick="runUrlExtractionTest()">URL抽出テスト</button>
+            <button class="test-button" onclick="runElementExtractionTest()">DOM要素抽出テスト</button>
+            <button class="test-button" onclick="runIntegrationTest()">統合テスト</button>
+            <button class="test-button" onclick="runAllTests()">全テスト実行</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>手動テスト</h2>
+            <p>以下のコードをブラウザのコンソールで実行して手動テストを行うことができます：</p>
+            
+            <div class="code-example">
+// URL抽出テスト
+extractChannelFromUrl('https://www.youtube.com/@TestChannel');
+
+// DOM要素抽出テスト（Google検索ページで実行）
+const links = document.querySelectorAll('a[href*="youtube.com"]');
+if (links.length > 0) {
+    extractChannelNameFromElement(links[0]);
+}
+
+// 動画情報取得テスト
+const videoLinks = document.querySelectorAll('a[href*="youtube.com/watch"]');
+if (videoLinks.length > 0) {
+    getYouTubeVideoInfo(videoLinks[0]);
+}
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>テスト結果</h2>
+            <div id="test-results" class="results info">テストを実行してください...</div>
+        </div>
+        
+        <div class="test-section">
+            <h2>使用方法</h2>
+            <ol>
+                <li>このHTMLファイルをブラウザで開く</li>
+                <li>上記のテストボタンをクリックしてテストを実行</li>
+                <li>Google検索ページでより詳細なテストを行う場合は、拡張機能を読み込んでコンソールで <code>window.debugYouTubeFilter.testChannelExtraction()</code> を実行</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- テスト対象の関数を読み込み -->
+    <script>
+        // google-content.jsから必要な関数をコピー（テスト用）
+        
+        /**
+         * YouTube URLからチャンネル情報を抽出
+         */
+        function extractChannelFromUrl(url) {
+            if (!url || typeof url !== 'string') {
+                return { channelId: null, channelHandle: null };
+            }
+            
+            let channelId = null;
+            let channelHandle = null;
+            
+            try {
+                let normalizedUrl = url;
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    normalizedUrl = 'https://' + url;
+                }
+                
+                const urlObj = new URL(normalizedUrl);
+                const params = new URLSearchParams(urlObj.search);
+                
+                if (params.has('channel')) {
+                    channelId = params.get('channel');
+                }
+                
+                if (urlObj.hostname === 'youtu.be') {
+                    return { channelId: null, channelHandle: null };
+                }
+                
+                if (urlObj.hostname.includes('youtube.com')) {
+                    const cPathMatch = urlObj.pathname.match(/\/c\/([^\/\?]+)/);
+                    if (cPathMatch) {
+                        channelId = decodeURIComponent(cPathMatch[1]);
+                    }
+                    
+                    const channelPathMatch = urlObj.pathname.match(/\/channel\/([^\/\?]+)/);
+                    if (channelPathMatch) {
+                        channelId = decodeURIComponent(channelPathMatch[1]);
+                    }
+                    
+                    const userPathMatch = urlObj.pathname.match(/\/user\/([^\/\?]+)/);
+                    if (userPathMatch) {
+                        channelId = decodeURIComponent(userPathMatch[1]);
+                    }
+                    
+                    const handlePathMatch = urlObj.pathname.match(/\/@([a-zA-Z0-9_.-]+)/);
+                    if (handlePathMatch) {
+                        channelHandle = '@' + handlePathMatch[1];
+                    }
+                    
+                    const handleMatch = url.match(/@([a-zA-Z0-9_.-]+)/);
+                    if (handleMatch && !channelHandle) {
+                        channelHandle = '@' + handleMatch[1];
+                    }
+                }
+                
+            } catch (error) {
+                console.debug('YouTube URL parsing error:', error, 'URL:', url);
+            }
+            
+            return { 
+                channelId: channelId ? channelId.trim() : null, 
+                channelHandle: channelHandle ? channelHandle.trim() : null 
+            };
+        }
+
+        /**
+         * テスト用のDOM要素からチャンネル名を抽出（簡易版）
+         */
+        function extractChannelNameFromElement(element) {
+            if (!element || !element.closest) {
+                return null;
+            }
+            
+            const parentContainer = element.closest('div, .test-container');
+            if (!parentContainer) return null;
+            
+            const cite = parentContainer.querySelector('cite');
+            if (cite && cite.textContent) {
+                const text = cite.textContent.trim();
+                if (text.includes('youtube.com/')) {
+                    const handleMatch = text.match(/youtube\.com\/@([^\/\s\?]+)/);
+                    if (handleMatch) {
+                        return handleMatch[1];
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        // テスト実行関数
+        function runUrlExtractionTest() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.className = 'results info';
+            resultsDiv.textContent = 'URL抽出テストを実行中...';
+            
+            try {
+                const tests = [
+                    {
+                        input: 'https://www.youtube.com/@TechChannel',
+                        expected: { channelId: null, channelHandle: '@TechChannel' },
+                        name: '@ハンドル形式'
+                    },
+                    {
+                        input: 'https://www.youtube.com/c/TechChannel',
+                        expected: { channelId: 'TechChannel', channelHandle: null },
+                        name: '/c/形式'
+                    },
+                    {
+                        input: 'https://www.youtube.com/channel/UC1234567890',
+                        expected: { channelId: 'UC1234567890', channelHandle: null },
+                        name: '/channel/形式'
+                    },
+                    {
+                        input: 'https://youtu.be/dQw4w9WgXcQ',
+                        expected: { channelId: null, channelHandle: null },
+                        name: '短縮URL'
+                    },
+                    {
+                        input: null,
+                        expected: { channelId: null, channelHandle: null },
+                        name: 'null入力'
+                    }
+                ];
+                
+                let results = 'URL抽出テスト結果:\n\n';
+                let allPassed = true;
+                
+                tests.forEach(test => {
+                    const result = extractChannelFromUrl(test.input);
+                    const passed = JSON.stringify(result) === JSON.stringify(test.expected);
+                    allPassed = allPassed && passed;
+                    
+                    results += `${passed ? '✓' : '✗'} ${test.name}: ${passed ? 'PASS' : 'FAIL'}\n`;
+                    if (!passed) {
+                        results += `  期待値: ${JSON.stringify(test.expected)}\n`;
+                        results += `  実際値: ${JSON.stringify(result)}\n`;
+                    }
+                });
+                
+                resultsDiv.className = allPassed ? 'results success' : 'results error';
+                resultsDiv.textContent = results + `\n総合結果: ${allPassed ? '成功' : '失敗'}`;
+                
+            } catch (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.textContent = `テスト実行エラー: ${error.message}`;
+            }
+        }
+
+        function runElementExtractionTest() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.className = 'results info';
+            resultsDiv.textContent = 'DOM要素抽出テストを実行中...';
+            
+            try {
+                // テスト用DOM要素を作成
+                const testContainer = document.createElement('div');
+                testContainer.className = 'test-container';
+                testContainer.innerHTML = `
+                    <a href="https://www.youtube.com/watch?v=test">Test Video</a>
+                    <cite>https://www.youtube.com/@TestChannel</cite>
+                `;
+                document.body.appendChild(testContainer);
+                
+                const testLink = testContainer.querySelector('a');
+                const result = extractChannelNameFromElement(testLink);
+                
+                // クリーンアップ
+                document.body.removeChild(testContainer);
+                
+                const expected = 'TestChannel';
+                const passed = result === expected;
+                
+                let results = 'DOM要素抽出テスト結果:\n\n';
+                results += `${passed ? '✓' : '✗'} cite要素からの抽出: ${passed ? 'PASS' : 'FAIL'}\n`;
+                if (!passed) {
+                    results += `  期待値: ${expected}\n`;
+                    results += `  実際値: ${result}\n`;
+                }
+                
+                // null要素テスト
+                const nullResult = extractChannelNameFromElement(null);
+                const nullPassed = nullResult === null;
+                results += `${nullPassed ? '✓' : '✗'} null要素テスト: ${nullPassed ? 'PASS' : 'FAIL'}\n`;
+                
+                const allPassed = passed && nullPassed;
+                resultsDiv.className = allPassed ? 'results success' : 'results error';
+                resultsDiv.textContent = results + `\n総合結果: ${allPassed ? '成功' : '失敗'}`;
+                
+            } catch (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.textContent = `テスト実行エラー: ${error.message}`;
+            }
+        }
+
+        function runIntegrationTest() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.className = 'results info';
+            resultsDiv.textContent = '統合テストを実行中...';
+            
+            try {
+                let results = '統合テスト結果:\n\n';
+                
+                // URL抽出とDOM抽出の組み合わせテスト
+                const testContainer = document.createElement('div');
+                testContainer.className = 'test-container';
+                testContainer.innerHTML = `
+                    <a href="https://www.youtube.com/@IntegrationTest">Integration Test Video</a>
+                    <cite>https://www.youtube.com/@IntegrationTest</cite>
+                `;
+                document.body.appendChild(testContainer);
+                
+                const testLink = testContainer.querySelector('a');
+                const urlResult = extractChannelFromUrl(testLink.href);
+                const elementResult = extractChannelNameFromElement(testLink);
+                
+                document.body.removeChild(testContainer);
+                
+                const urlPassed = urlResult.channelHandle === '@IntegrationTest';
+                const elementPassed = elementResult === 'IntegrationTest';
+                
+                results += `${urlPassed ? '✓' : '✗'} URL抽出: ${urlPassed ? 'PASS' : 'FAIL'}\n`;
+                results += `${elementPassed ? '✓' : '✗'} DOM抽出: ${elementPassed ? 'PASS' : 'FAIL'}\n`;
+                
+                const allPassed = urlPassed && elementPassed;
+                resultsDiv.className = allPassed ? 'results success' : 'results error';
+                resultsDiv.textContent = results + `\n総合結果: ${allPassed ? '成功' : '失敗'}`;
+                
+            } catch (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.textContent = `テスト実行エラー: ${error.message}`;
+            }
+        }
+
+        function runAllTests() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.className = 'results info';
+            resultsDiv.textContent = '全テストを実行中...';
+            
+            setTimeout(() => {
+                try {
+                    let allResults = '=== 全テスト実行結果 ===\n\n';
+                    let overallPassed = true;
+                    
+                    // URL抽出テスト
+                    const urlTests = [
+                        { input: 'https://www.youtube.com/@Test', expected: { channelId: null, channelHandle: '@Test' } },
+                        { input: 'https://www.youtube.com/c/Test', expected: { channelId: 'Test', channelHandle: null } },
+                        { input: null, expected: { channelId: null, channelHandle: null } }
+                    ];
+                    
+                    let urlPassed = true;
+                    urlTests.forEach(test => {
+                        const result = extractChannelFromUrl(test.input);
+                        if (JSON.stringify(result) !== JSON.stringify(test.expected)) {
+                            urlPassed = false;
+                        }
+                    });
+                    
+                    allResults += `${urlPassed ? '✓' : '✗'} URL抽出テスト: ${urlPassed ? 'PASS' : 'FAIL'}\n`;
+                    overallPassed = overallPassed && urlPassed;
+                    
+                    // DOM抽出テスト
+                    const testContainer = document.createElement('div');
+                    testContainer.className = 'test-container';
+                    testContainer.innerHTML = '<a href="https://www.youtube.com/watch?v=test">Test</a><cite>https://www.youtube.com/@Test</cite>';
+                    document.body.appendChild(testContainer);
+                    
+                    const testLink = testContainer.querySelector('a');
+                    const elementResult = extractChannelNameFromElement(testLink);
+                    const elementPassed = elementResult === 'Test';
+                    
+                    document.body.removeChild(testContainer);
+                    
+                    allResults += `${elementPassed ? '✓' : '✗'} DOM抽出テスト: ${elementPassed ? 'PASS' : 'FAIL'}\n`;
+                    overallPassed = overallPassed && elementPassed;
+                    
+                    allResults += `\n=== 最終結果: ${overallPassed ? '全テスト成功 ✓' : 'テスト失敗 ✗'} ===`;
+                    
+                    resultsDiv.className = overallPassed ? 'results success' : 'results error';
+                    resultsDiv.textContent = allResults;
+                    
+                } catch (error) {
+                    resultsDiv.className = 'results error';
+                    resultsDiv.textContent = `全テスト実行エラー: ${error.message}`;
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>

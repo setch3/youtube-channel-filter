@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google検索フィルタリング パフォーマンステスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-button {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #3367d6;
+        }
+        .results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .mock-search-results {
+            display: grid;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .mock-result {
+            border: 1px solid #e0e0e0;
+            padding: 15px;
+            border-radius: 4px;
+            background: white;
+        }
+        .mock-result a {
+            color: #1a0dab;
+            text-decoration: none;
+            font-size: 18px;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .mock-result cite {
+            color: #006621;
+            font-style: normal;
+            font-size: 14px;
+        }
+        .performance-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .stat-card {
+            background: #e8f0fe;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a73e8;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #5f6368;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Google検索フィルタリング パフォーマンステスト</h1>
+        <p>このページは、Google検索用YouTubeフィルタリング機能のパフォーマンス最適化をテストするためのものです。</p>
+        
+        <div class="test-section">
+            <h2>1. セレクタ最適化テスト</h2>
+            <p>セレクタのパフォーマンス測定と最適化をテストします。</p>
+            <button class="test-button" onclick="testSelectorOptimization()">セレクタ最適化テスト実行</button>
+            <div id="selector-results" class="results" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. 要素検出パフォーマンステスト</h2>
+            <p>YouTube動画要素の検出速度をテストします。</p>
+            <button class="test-button" onclick="testElementDetection()">要素検出テスト実行</button>
+            <div id="detection-results" class="results" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. バッチ処理テスト</h2>
+            <p>大量要素のバッチ処理パフォーマンスをテストします。</p>
+            <button class="test-button" onclick="testBatchProcessing()">バッチ処理テスト実行</button>
+            <div id="batch-results" class="results" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. DOM監視最適化テスト</h2>
+            <p>DOM監視対象の最適化をテストします。</p>
+            <button class="test-button" onclick="testDomOptimization()">DOM最適化テスト実行</button>
+            <div id="dom-results" class="results" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>5. 統合パフォーマンステスト</h2>
+            <p>全体的なパフォーマンスを測定します。</p>
+            <button class="test-button" onclick="runFullPerformanceTest()">統合テスト実行</button>
+            <div id="full-results" class="results" style="display: none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>現在の統計情報</h2>
+            <button class="test-button" onclick="showCurrentStats()">統計情報表示</button>
+            <div id="stats-display" class="performance-stats" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <!-- モックGoogle検索結果 -->
+    <div class="container">
+        <h2>モック検索結果（テスト用）</h2>
+        <div class="mock-search-results" id="mock-results">
+            <!-- JavaScriptで動的に生成 -->
+        </div>
+    </div>
+
+    <script>
+        // モック検索結果を生成
+        function generateMockResults() {
+            const mockResults = document.getElementById('mock-results');
+            const testChannels = [
+                { name: 'TestChannel1', handle: '@testchannel1' },
+                { name: 'TestChannel2', handle: '@testchannel2' },
+                { name: 'SampleChannel', handle: '@samplechannel' },
+                { name: 'DemoChannel', handle: '@demochannel' },
+                { name: 'ExampleChannel', handle: '@examplechannel' }
+            ];
+            
+            for (let i = 0; i < 50; i++) {
+                const channel = testChannels[i % testChannels.length];
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'mock-result g tF2Cxc';
+                resultDiv.innerHTML = `
+                    <a href="https://www.youtube.com/watch?v=test${i}">テスト動画 ${i + 1} - ${channel.name}</a>
+                    <cite>https://www.youtube.com/${channel.handle}</cite>
+                    <div class="VuuXrf">これはテスト用のモック検索結果です。チャンネル: ${channel.name}</div>
+                `;
+                mockResults.appendChild(resultDiv);
+            }
+        }
+        
+        // テスト関数
+        async function testSelectorOptimization() {
+            const resultsDiv = document.getElementById('selector-results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.textContent = 'テスト実行中...';
+            
+            try {
+                if (window.debugYouTubeFilter && window.debugYouTubeFilter.performanceTest) {
+                    const results = await window.debugYouTubeFilter.performanceTest();
+                    resultsDiv.textContent = JSON.stringify(results.selectorOptimization, null, 2);
+                } else {
+                    resultsDiv.textContent = 'エラー: debugYouTubeFilter が利用できません。Google検索ページで実行してください。';
+                }
+            } catch (error) {
+                resultsDiv.textContent = `エラー: ${error.message}`;
+            }
+        }
+        
+        async function testElementDetection() {
+            const resultsDiv = document.getElementById('detection-results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.textContent = 'テスト実行中...';
+            
+            try {
+                if (window.debugYouTubeFilter) {
+                    const startTime = performance.now();
+                    const elements = window.debugYouTubeFilter.detectVideos();
+                    const endTime = performance.now();
+                    
+                    const results = {
+                        detectionTime: `${(endTime - startTime).toFixed(2)}ms`,
+                        elementsFound: elements.length,
+                        averageTime: elements.length > 0 ? `${((endTime - startTime) / elements.length).toFixed(2)}ms` : 'N/A'
+                    };
+                    
+                    resultsDiv.textContent = JSON.stringify(results, null, 2);
+                } else {
+                    resultsDiv.textContent = 'エラー: debugYouTubeFilter が利用できません。';
+                }
+            } catch (error) {
+                resultsDiv.textContent = `エラー: ${error.message}`;
+            }
+        }
+        
+        async function testBatchProcessing() {
+            const resultsDiv = document.getElementById('batch-results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.textContent = 'テスト実行中...';
+            
+            try {
+                if (window.debugYouTubeFilter) {
+                    const startTime = performance.now();
+                    window.debugYouTubeFilter.filterVideos(document, false);
+                    
+                    // 少し待ってから結果を取得
+                    setTimeout(() => {
+                        const endTime = performance.now();
+                        const stats = window.debugYouTubeFilter.stats();
+                        
+                        const results = {
+                            processingTime: `${(endTime - startTime).toFixed(2)}ms`,
+                            processedElements: stats.processed,
+                            hiddenElements: stats.hidden,
+                            errors: stats.errors
+                        };
+                        
+                        resultsDiv.textContent = JSON.stringify(results, null, 2);
+                    }, 1000);
+                } else {
+                    resultsDiv.textContent = 'エラー: debugYouTubeFilter が利用できません。';
+                }
+            } catch (error) {
+                resultsDiv.textContent = `エラー: ${error.message}`;
+            }
+        }
+        
+        async function testDomOptimization() {
+            const resultsDiv = document.getElementById('dom-results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.textContent = 'テスト実行中...';
+            
+            try {
+                if (window.debugYouTubeFilter && window.debugYouTubeFilter.performanceTest) {
+                    const results = await window.debugYouTubeFilter.performanceTest();
+                    resultsDiv.textContent = JSON.stringify(results.domObserverOptimization, null, 2);
+                } else {
+                    resultsDiv.textContent = 'エラー: debugYouTubeFilter が利用できません。';
+                }
+            } catch (error) {
+                resultsDiv.textContent = `エラー: ${error.message}`;
+            }
+        }
+        
+        async function runFullPerformanceTest() {
+            const resultsDiv = document.getElementById('full-results');
+            resultsDiv.style.display = 'block';
+            resultsDiv.textContent = '統合テスト実行中...';
+            
+            try {
+                if (window.debugYouTubeFilter && window.debugYouTubeFilter.performanceTest) {
+                    const results = await window.debugYouTubeFilter.performanceTest();
+                    resultsDiv.textContent = JSON.stringify(results, null, 2);
+                } else {
+                    resultsDiv.textContent = 'エラー: debugYouTubeFilter が利用できません。Google検索ページで実行してください。';
+                }
+            } catch (error) {
+                resultsDiv.textContent = `エラー: ${error.message}`;
+            }
+        }
+        
+        function showCurrentStats() {
+            const statsDiv = document.getElementById('stats-display');
+            statsDiv.style.display = 'grid';
+            
+            try {
+                if (window.debugYouTubeFilter) {
+                    const stats = window.debugYouTubeFilter.stats();
+                    
+                    statsDiv.innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.processed}</div>
+                            <div class="stat-label">処理済み要素</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.hidden}</div>
+                            <div class="stat-label">非表示要素</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.errors}</div>
+                            <div class="stat-label">エラー数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.optimizedSelectors ? stats.optimizedSelectors.length : 'N/A'}</div>
+                            <div class="stat-label">最適化セレクタ数</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.cacheInfo && stats.cacheInfo.settingsCacheValid ? 'Valid' : 'Invalid'}</div>
+                            <div class="stat-label">設定キャッシュ</div>
+                        </div>
+                    `;
+                } else {
+                    statsDiv.innerHTML = '<div class="stat-card"><div class="stat-value">N/A</div><div class="stat-label">debugYouTubeFilter が利用できません</div></div>';
+                }
+            } catch (error) {
+                statsDiv.innerHTML = `<div class="stat-card"><div class="stat-value">Error</div><div class="stat-label">${error.message}</div></div>`;
+            }
+        }
+        
+        // ページ読み込み時にモック結果を生成
+        document.addEventListener('DOMContentLoaded', function() {
+            generateMockResults();
+            
+            // 5秒後に統計情報を自動表示
+            setTimeout(() => {
+                showCurrentStats();
+            }, 5000);
+        });
+        
+        // 定期的に統計情報を更新
+        setInterval(() => {
+            const statsDiv = document.getElementById('stats-display');
+            if (statsDiv.style.display === 'grid') {
+                showCurrentStats();
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

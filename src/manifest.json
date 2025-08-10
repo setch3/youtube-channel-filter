@@ -4,12 +4,20 @@
   "description": "Hide videos from specified YouTube channels.",
   "version": "1.0",
   "permissions": ["storage"],
-  "host_permissions": ["*://*.youtube.com/*"],
+  "host_permissions": [
+    "*://*.youtube.com/*",
+    "*://www.google.com/*"
+  ],
   "options_page": "options.html",
   "content_scripts": [
     {
       "matches": ["*://*.youtube.com/*"],
       "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["*://www.google.com/*"],
+      "js": ["google-content.js"],
       "run_at": "document_idle"
     }
   ]
