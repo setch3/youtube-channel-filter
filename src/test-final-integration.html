@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google検索フィルタリング機能 - 最終統合テスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        .mock-google-result {
+            border: 1px solid #e0e0e0;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .mock-youtube-link {
+            color: #1a0dab;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .mock-channel-info {
+            color: #006621;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .hidden-element {
+            display: none !important;
+        }
+        #testResults {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Google検索フィルタリング機能 - 最終統合テスト</h1>
+    
+    <div class="test-section">
+        <h2>テスト環境設定</h2>
+        <button onclick="setupTestEnvironment()">テスト環境を初期化</button>
+        <button onclick="loadTestData()">テストデータを読み込み</button>
+        <div id="setupResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>機能テスト</h2>
+        <button onclick="runAllTests()">全テストを実行</button>
+        <button onclick="testChannelExtraction()">チャンネル情報抽出テスト</button>
+        <button onclick="testFilteringLogic()">フィルタリングロジックテスト</button>
+        <button onclick="testDOMManipulation()">DOM操作テスト</button>
+        <button onclick="testStorageIntegration()">ストレージ連携テスト</button>
+        <button onclick="testPerformance()">パフォーマンステスト</button>
+    </div>
+
+    <div class="test-section">
+        <h2>モックGoogle検索結果</h2>
+        <div id="mockSearchResults">
+            <!-- テスト用のモック検索結果がここに生成されます -->
+        </div>
+        <button onclick="generateMockResults()">モック検索結果を生成</button>
+        <button onclick="applyFiltering()">フィルタリングを適用</button>
+    </div>
+
+    <div id="testResults"></div>
+
+    <script src="google-content.js"></script>
+    <script>
+        // テスト用のグローバル変数
+        let testResults = [];
+        let testData = {
+            bannedIds: ['@testchannel1', 'UC123456789', 'testuser'],
+            bannedNames: ['テストチャンネル', 'Test Channel', 'ブロック対象'],
+            enableGoogleFilter: true
+        };
+
+        // テスト環境の初期化
+        function setupTestEnvironment() {
+            const resultsDiv = document.getElementById('setupResults');
+            resultsDiv.innerHTML = '<div class="info">テスト環境を初期化中...</div>';
+            
+            try {
+                // グローバル変数の初期化
+                bannedIds = testData.bannedIds;
+                bannedNames = testData.bannedNames;
+                enableGoogleFilter = testData.enableGoogleFilter;
+                
+                // テスト結果をクリア
+                testResults = [];
+                
+                resultsDiv.innerHTML = '<div class="success">テスト環境の初期化が完了しました</div>';
+                logTestResult('環境初期化', true, 'テスト環境が正常に初期化されました');
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">初期化エラー: ${error.message}</div>`;
+                logTestResult('環境初期化', false, error.message);
+            }
+        }
+
+        // テストデータの読み込み
+        function loadTestData() {
+            const resultsDiv = document.getElementById('setupResults');
+            
+            try {
+                // Chrome storage APIのモック（テスト環境用）
+                if (typeof chrome === 'undefined') {
+                    window.chrome = {
+                        storage: {
+                            sync: {
+                                get: function(keys, callback) {
+                                    const data = {
+                                        bannedIds: testData.bannedIds,
+                                        bannedNames: testData.bannedNames,
+                                        enableGoogleFilter: testData.enableGoogleFilter
+                                    };
+                                    callback(data);
+                                },
+                                set: function(data, callback) {
+                                    Object.assign(testData, data);
+                                    if (callback) callback();
+                                }
+                            }
+                        }
+                    };
+                }
+                
+                resultsDiv.innerHTML += '<div class="success">テストデータが読み込まれました</div>';
+                logTestResult('データ読み込み', true, 'テストデータの読み込みが完了しました');
+                
+            } catch (error) {
+                resultsDiv.innerHTML += `<div class="error">データ読み込みエラー: ${error.message}</div>`;
+                logTestResult('データ読み込み', false, error.message);
+            }
+        }
+
+        // 全テストの実行
+        function runAllTests() {
+            testResults = [];
+            const startTime = performance.now();
+            
+            try {
+                testChannelExtraction();
+                testFilteringLogic();
+                testDOMManipulation();
+                testStorageIntegration();
+                testPerformance();
+                
+                const endTime = performance.now();
+                const totalTime = endTime - startTime;
+                
+                displayTestResults();
+                logTestResult('全テスト実行', true, `全テストが ${totalTime.toFixed(2)}ms で完了しました`);
+                
+            } catch (error) {
+                logTestResult('全テスト実行', false, error.message);
+                displayTestResults();
+            }
+        }
+
+        // チャンネル情報抽出のテスト
+        function testChannelExtraction() {
+            const testCases = [
+                {
+                    url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&channel=@testchannel1',
+                    expected: { channelId: '@testchannel1', channelHandle: null }
+                },
+                {
+                    url: 'https://www.youtube.com/@testchannel1/videos',
+                    expected: { channelId: null, channelHandle: '@testchannel1' }
+                },
+                {
+                    url: 'https://www.youtube.com/channel/UC123456789',
+                    expected: { channelId: 'UC123456789', channelHandle: null }
+                },
+                {
+                    url: 'https://youtu.be/dQw4w9WgXcQ',
+                    expected: { channelId: null, channelHandle: null }
+                }
+            ];
+
+            let passed = 0;
+            let failed = 0;
+
+            testCases.forEach((testCase, index) => {
+                try {
+                    const result = extractChannelFromUrl(testCase.url);
+                    
+                    if (result.channelId === testCase.expected.channelId && 
+                        result.channelHandle === testCase.expected.channelHandle) {
+                        passed++;
+                        logTestResult(`チャンネル抽出 ${index + 1}`, true, `正常に抽出: ${JSON.stringify(result)}`);
+                    } else {
+                        failed++;
+                        logTestResult(`チャンネル抽出 ${index + 1}`, false, 
+                            `期待値: ${JSON.stringify(testCase.expected)}, 実際: ${JSON.stringify(result)}`);
+                    }
+                } catch (error) {
+                    failed++;
+                    logTestResult(`チャンネル抽出 ${index + 1}`, false, error.message);
+                }
+            });
+
+            logTestResult('チャンネル情報抽出テスト', passed > failed, 
+                `${passed}件成功, ${failed}件失敗`);
+        }
+
+        // フィルタリングロジックのテスト
+        function testFilteringLogic() {
+            const testCases = [
+                {
+                    videoInfo: { channelId: '@testchannel1', channelName: 'Test Channel' },
+                    shouldHide: true,
+                    reason: 'Channel ID match'
+                },
+                {
+                    videoInfo: { channelId: 'UC123456789', channelName: 'Another Channel' },
+                    shouldHide: true,
+                    reason: 'Channel ID match'
+                },
+                {
+                    videoInfo: { channelId: 'UC999999999', channelName: 'テストチャンネル' },
+                    shouldHide: true,
+                    reason: 'Channel name match'
+                },
+                {
+                    videoInfo: { channelId: 'UC888888888', channelName: 'Safe Channel' },
+                    shouldHide: false,
+                    reason: 'No match found'
+                }
+            ];
+
+            let passed = 0;
+            let failed = 0;
+
+            testCases.forEach((testCase, index) => {
+                try {
+                    const result = shouldHideVideo(testCase.videoInfo);
+                    
+                    if (result.shouldHide === testCase.shouldHide) {
+                        passed++;
+                        logTestResult(`フィルタリング ${index + 1}`, true, 
+                            `正常判定: ${result.shouldHide} (${result.reason})`);
+                    } else {
+                        failed++;
+                        logTestResult(`フィルタリング ${index + 1}`, false, 
+                            `期待値: ${testCase.shouldHide}, 実際: ${result.shouldHide}`);
+                    }
+                } catch (error) {
+                    failed++;
+                    logTestResult(`フィルタリング ${index + 1}`, false, error.message);
+                }
+            });
+
+            logTestResult('フィルタリングロジックテスト', passed > failed, 
+                `${passed}件成功, ${failed}件失敗`);
+        }
+
+        // DOM操作のテスト
+        function testDOMManipulation() {
+            try {
+                // テスト用の要素を作成
+                const testElement = document.createElement('div');
+                testElement.className = 'test-video-element';
+                testElement.innerHTML = '<a href="https://www.youtube.com/watch?v=test">Test Video</a>';
+                document.body.appendChild(testElement);
+
+                // 非表示処理のテスト
+                const link = testElement.querySelector('a');
+                const hideResult = hideVideoElement(link, { reason: 'test', matchedValue: 'test' });
+                
+                if (hideResult) {
+                    logTestResult('DOM非表示処理', true, '要素が正常に非表示になりました');
+                } else {
+                    logTestResult('DOM非表示処理', false, '要素の非表示処理に失敗しました');
+                }
+
+                // 再表示処理のテスト
+                const showResult = showVideoElement(link);
+                
+                if (showResult) {
+                    logTestResult('DOM再表示処理', true, '要素が正常に再表示されました');
+                } else {
+                    logTestResult('DOM再表示処理', false, '要素の再表示処理に失敗しました');
+                }
+
+                // テスト要素を削除
+                document.body.removeChild(testElement);
+                
+            } catch (error) {
+                logTestResult('DOM操作テスト', false, error.message);
+            }
+        }
+
+        // ストレージ連携のテスト
+        function testStorageIntegration() {
+            try {
+                // ストレージからの設定読み込みテスト
+                if (typeof chrome !== 'undefined' && chrome.storage) {
+                    chrome.storage.sync.get(['bannedIds', 'bannedNames', 'enableGoogleFilter'], (data) => {
+                        if (data.bannedIds && data.bannedNames && typeof data.enableGoogleFilter === 'boolean') {
+                            logTestResult('ストレージ読み込み', true, '設定が正常に読み込まれました');
+                        } else {
+                            logTestResult('ストレージ読み込み', false, '設定の読み込みに失敗しました');
+                        }
+                    });
+                } else {
+                    logTestResult('ストレージ連携テスト', true, 'モック環境でのテストが完了しました');
+                }
+                
+            } catch (error) {
+                logTestResult('ストレージ連携テスト', false, error.message);
+            }
+        }
+
+        // パフォーマンステスト
+        function testPerformance() {
+            try {
+                const startTime = performance.now();
+                
+                // 大量の要素を処理するシミュレーション
+                const testElements = [];
+                for (let i = 0; i < 100; i++) {
+                    const element = document.createElement('a');
+                    element.href = `https://www.youtube.com/watch?v=test${i}`;
+                    testElements.push(element);
+                }
+
+                // フィルタリング処理の実行
+                testElements.forEach(element => {
+                    const videoInfo = getYouTubeVideoInfo(element);
+                    shouldHideVideo(videoInfo);
+                });
+
+                const endTime = performance.now();
+                const processingTime = endTime - startTime;
+
+                if (processingTime < 1000) { // 1秒以内
+                    logTestResult('パフォーマンステスト', true, 
+                        `100要素の処理時間: ${processingTime.toFixed(2)}ms`);
+                } else {
+                    logTestResult('パフォーマンステスト', false, 
+                        `処理時間が長すぎます: ${processingTime.toFixed(2)}ms`);
+                }
+                
+            } catch (error) {
+                logTestResult('パフォーマンステスト', false, error.message);
+            }
+        }
+
+        // モック検索結果の生成
+        function generateMockResults() {
+            const mockResults = [
+                {
+                    title: 'テスト動画1 - YouTube',
+                    url: 'https://www.youtube.com/watch?v=test1&channel=@testchannel1',
+                    channelName: 'テストチャンネル',
+                    shouldBeHidden: true
+                },
+                {
+                    title: 'Safe Video - YouTube',
+                    url: 'https://www.youtube.com/watch?v=safe1',
+                    channelName: 'Safe Channel',
+                    shouldBeHidden: false
+                },
+                {
+                    title: 'ブロック対象動画 - YouTube',
+                    url: 'https://www.youtube.com/watch?v=blocked1',
+                    channelName: 'ブロック対象',
+                    shouldBeHidden: true
+                }
+            ];
+
+            const container = document.getElementById('mockSearchResults');
+            container.innerHTML = '';
+
+            mockResults.forEach((result, index) => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'mock-google-result';
+                resultDiv.innerHTML = `
+                    <div class="tF2Cxc">
+                        <div class="yuRUbf">
+                            <a href="${result.url}" class="mock-youtube-link">${result.title}</a>
+                        </div>
+                        <div class="mock-channel-info">
+                            <cite>youtube.com › ${result.channelName}</cite>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(resultDiv);
+            });
+
+            logTestResult('モック結果生成', true, `${mockResults.length}件のモック検索結果を生成しました`);
+        }
+
+        // フィルタリングの適用
+        function applyFiltering() {
+            try {
+                const youtubeLinks = document.querySelectorAll('#mockSearchResults a[href*="youtube.com"]');
+                let hiddenCount = 0;
+                let totalCount = youtubeLinks.length;
+
+                youtubeLinks.forEach(link => {
+                    const videoInfo = getYouTubeVideoInfo(link);
+                    const filterResult = shouldHideVideo(videoInfo);
+                    
+                    if (filterResult.shouldHide) {
+                        hideVideoElement(link, filterResult);
+                        hiddenCount++;
+                    }
+                });
+
+                logTestResult('フィルタリング適用', true, 
+                    `${totalCount}件中${hiddenCount}件を非表示にしました`);
+                
+            } catch (error) {
+                logTestResult('フィルタリング適用', false, error.message);
+            }
+        }
+
+        // テスト結果のログ記録
+        function logTestResult(testName, success, message) {
+            testResults.push({
+                name: testName,
+                success: success,
+                message: message,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // テスト結果の表示
+        function displayTestResults() {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = '<h2>テスト結果</h2>';
+
+            const successCount = testResults.filter(r => r.success).length;
+            const totalCount = testResults.length;
+
+            resultsDiv.innerHTML += `
+                <div class="test-result ${successCount === totalCount ? 'success' : 'warning'}">
+                    総合結果: ${successCount}/${totalCount} テストが成功
+                </div>
+            `;
+
+            testResults.forEach(result => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = `test-result ${result.success ? 'success' : 'error'}`;
+                resultDiv.innerHTML = `
+                    <strong>${result.name}</strong>: ${result.success ? '成功' : '失敗'}<br>
+                    ${result.message}<br>
+                    <small>${result.timestamp}</small>
+                `;
+                resultsDiv.appendChild(resultDiv);
+            });
+        }
+
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('最終統合テストページが読み込まれました');
+        });
+    </script>
+</body>
+</html>

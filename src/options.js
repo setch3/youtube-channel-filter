@@ -5,10 +5,11 @@ const nameList = document.getElementById('nameList');
 const addIdBtn = document.getElementById('addId');
 const addNameBtn = document.getElementById('addName');
 const hideShortsCheckbox = document.getElementById('hideShortsSearch');
+const enableGoogleFilterCheckbox = document.getElementById('enableGoogleFilter');
 
 function refresh() {
   chrome.storage.sync.get(
-    { bannedIds: [], bannedNames: [], hideShortsSearch: false },
+    { bannedIds: [], bannedNames: [], hideShortsSearch: false, enableGoogleFilter: true },
     data => {
       idList.innerHTML = '';
       data.bannedIds.forEach(id => {
@@ -43,6 +44,7 @@ function refresh() {
       });
 
       hideShortsCheckbox.checked = data.hideShortsSearch;
+      enableGoogleFilterCheckbox.checked = data.enableGoogleFilter;
     }
   );
 }
@@ -77,6 +79,10 @@ addNameBtn.addEventListener('click', () => {
 
 hideShortsCheckbox.addEventListener('change', () => {
   chrome.storage.sync.set({ hideShortsSearch: hideShortsCheckbox.checked });
+});
+
+enableGoogleFilterCheckbox.addEventListener('change', () => {
+  chrome.storage.sync.set({ enableGoogleFilter: enableGoogleFilterCheckbox.checked });
 });
 
 document.addEventListener('DOMContentLoaded', refresh);
